@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSS Reader</title>
+    <link rel="stylesheet" href="styles.scss">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>RSS Reader</h1>
+        </header>
+
+        <div class="bookmarks-container">
+            <div id="bookmarks" class="bookmarks-bar"></div>
+        </div>
+
+        <div class="rss-management">
+            <div class="rss-header">
+                <h2>Your Feeds</h2>
+                <button id="manageFeedsBtn" class="add-rss-btn">
+                    <span>Add Feed</span>
+                </button>
+            </div>
+            <div id="rssManager" style="display: none;">
+                <div class="settings">
+                    <input type="text" id="rssUrl" placeholder="RSS Feed URL">
+                    <input type="text" id="rssName" placeholder="Feed Name (optional)">
+                    <input type="text" id="rssCode" placeholder="Feed Code (optional)">
+                    <input type="number" id="rssLimit" placeholder="Post Limit" value="20" min="1" max="100">
+                    <button id="saveUrl">Add</button>
+                </div>
+            </div>
+            <div id="rssFeeds" class="rss-list"></div>
+        </div>
+
+        <div id="loading">Loading...</div>
+        <div class="error" style="display: none;"></div>
+        <div id="loadMore" style="display: none;">Load More</div>
+        <div class="articles-grid"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
