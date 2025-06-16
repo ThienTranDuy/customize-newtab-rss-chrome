@@ -13,20 +13,20 @@
 
     <div class="container">
         <header>
-            <h1>RSS Reader</h1>
             <button id="manageFeedsBtn" class="manage-feeds-btn">Manage Feeds</button>
         </header>
 
         <div id="rssManager" class="rss-manager" style="display: none;">
+            <h3>Add new feed</h3>
             <div class="rss-input-group">
                 <input type="text" id="rssUrl" placeholder="Enter RSS URL">
                 <input type="text" id="rssName" placeholder="Feed Name (optional)">
                 <input type="text" id="rssCode" placeholder="Feed Code (optional)">
                 <input type="number" id="rssLimit" placeholder="Post Limit" min="1" max="100" value="20">
-                <button id="saveUrl">Add Feed</button>
+                <button id="saveUrl">Submit</button>
             </div>
             <div class="rss-feeds-list">
-                <h3>Your Feeds</h3>
+                <h3>Manage Feeds</h3>
                 <div id="rssFeeds"></div>
             </div>
         </div>
@@ -45,6 +45,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html> 

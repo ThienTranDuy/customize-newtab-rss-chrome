@@ -1,3 +1,6 @@
+import { displayBookmarkBar } from './bookmark.js';
+import { loadAllFeeds, loadMoreArticles } from './article.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const rssUrlInput = document.getElementById('rssUrl');
     const rssNameInput = document.getElementById('rssName');
@@ -13,11 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('.container');
 
     // Store all articles and pagination
-    let allArticles = [];
     let pinnedFeeds = new Set();
-    let currentPage = 1;
-    const articlesPerPage = 50;
-    let isLoading = false;
 
     // Load pinned feeds from storage
     chrome.storage.sync.get(['pinnedFeeds'], (result) => {
@@ -33,15 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load More button click handler
     loadMoreElement.addEventListener('click', () => {
-        if (!isLoading) {
-            loadMoreArticles();
-        }
+        loadMoreArticles();
     });
 
     // Scroll load more
     container.addEventListener('scroll', () => {
-        if (isLoading) return;
-
         const { scrollTop, scrollHeight, clientHeight } = container;
         const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
         
@@ -55,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.rssFeeds && result.rssFeeds.length > 0) {
             displayRssFeeds(result.rssFeeds);
             // Load all feeds
-            loadAllFeeds(result.rssFeeds);
+            loadAllFeeds(result.rssFeeds, pinnedFeeds);
         }
     });
 
@@ -85,9 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     chrome.storage.sync.set({ rssFeeds: feeds }, () => {
                         displayRssFeeds(feeds);
                         // Clear articles and reload all feeds
-                        allArticles = [];
-                        currentPage = 1;
-                        loadAllFeeds(feeds);
+                        loadAllFeeds(feeds, pinnedFeeds);
                         rssUrlInput.value = '';
                         rssNameInput.value = '';
                         rssCodeInput.value = '';
@@ -191,9 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 // Reload articles
-                allArticles = [];
-                currentPage = 1;
-                loadAllFeeds(feeds);
+                loadAllFeeds(feeds, pinnedFeeds);
             });
         });
 
@@ -223,9 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     chrome.storage.sync.set({ rssFeeds: feeds }, () => {
                         displayRssFeeds(feeds);
-                        allArticles = [];
-                        currentPage = 1;
-                        loadAllFeeds(feeds);
+                        loadAllFeeds(feeds, pinnedFeeds);
                     });
                 });
             });
@@ -243,358 +232,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         pinnedFeeds: Array.from(pinnedFeeds)
                     }, () => {
                         displayRssFeeds(feeds);
-                        allArticles = [];
-                        currentPage = 1;
-                        loadAllFeeds(feeds);
+                        loadAllFeeds(feeds, pinnedFeeds);
                     });
                 });
             });
         });
-    }
-
-    async function loadAllFeeds(feeds) {
-        const loadingElement = document.getElementById('loading');
-        const errorElement = document.querySelector('.error');
-
-        if (!loadingElement || !errorElement) {
-            console.error('Required elements not found');
-            return;
-        }
-
-        try {
-            loadingElement.style.display = 'block';
-            errorElement.style.display = 'none';
-
-            // Reset pagination
-            currentPage = 1;
-            allArticles = [];
-
-            // Sort feeds by pinned status
-            const sortedFeeds = [...feeds].sort((a, b) => {
-                const aPinned = pinnedFeeds.has(a.url);
-                const bPinned = pinnedFeeds.has(b.url);
-                if (aPinned && !bPinned) return -1;
-                if (!aPinned && bPinned) return 1;
-                return 0;
-            });
-
-            // Fetch all feeds in parallel
-            const feedPromises = sortedFeeds.map(feed => fetchAndParseFeed(feed.url, feed.name, feed.code, feed.limit));
-            const results = await Promise.allSettled(feedPromises);
-
-            // Collect all articles
-            results.forEach((result, index) => {
-                if (result.status === 'fulfilled') {
-                    const feed = sortedFeeds[index];
-                    const articles = result.value.map(article => ({
-                        ...article,
-                        isFromPinnedFeed: pinnedFeeds.has(feed.url)
-                    }));
-                    allArticles = allArticles.concat(articles);
-                }
-            });
-
-            // Remove duplicate articles based on link
-            allArticles = allArticles.filter((article, index, self) =>
-                index === self.findIndex((a) => a.link === article.link)
-            );
-
-            // Sort all articles by date
-            allArticles.sort((a, b) => {
-                // First sort by pinned feed status
-                if (a.isFromPinnedFeed && !b.isFromPinnedFeed) return -1;
-                if (!a.isFromPinnedFeed && b.isFromPinnedFeed) return 1;
-                // Then sort by date
-                return b.pubDate - a.pubDate;
-            });
-
-            console.log('Total articles:', allArticles.length); // Debug log
-
-            // Display first page of articles
-            displayArticles();
-
-        } catch (error) {
-            console.error('Error loading feeds:', error);
-            errorElement.textContent = error.message;
-            errorElement.style.display = 'block';
-        } finally {
-            loadingElement.style.display = 'none';
-        }
-    }
-
-    function loadMoreArticles() {
-        if (isLoading || currentPage * articlesPerPage >= allArticles.length) return;
-
-        isLoading = true;
-        loadMoreElement.classList.add('loading');
-        loadMoreElement.textContent = 'Loading...';
-
-        // Simulate loading delay
-        setTimeout(() => {
-            currentPage++;
-            displayArticles();
-            isLoading = false;
-            loadMoreElement.classList.remove('loading');
-            loadMoreElement.textContent = 'Load More';
-            
-            // Hide button if no more articles
-            if (currentPage * articlesPerPage >= allArticles.length) {
-                loadMoreElement.style.display = 'none';
-            }
-        }, 300);
-    }
-
-    function displayArticles() {
-        const articlesGrid = document.querySelector('.articles-grid');
-        if (!articlesGrid) return;
-
-        // Calculate start and end indices for current page
-        const start = (currentPage - 1) * articlesPerPage;
-        const end = Math.min(currentPage * articlesPerPage, allArticles.length);
-        const currentArticles = allArticles.slice(start, end);
-
-        // Clear existing articles if it's the first page
-        if (currentPage === 1) {
-            articlesGrid.innerHTML = '';
-        }
-
-        // Add new articles
-        currentArticles.forEach(article => {
-            const articleCard = createArticleCard(article);
-            articlesGrid.appendChild(articleCard);
-        });
-
-        // Show/hide load more button
-        if (loadMoreElement) {
-            const hasMoreArticles = end < allArticles.length;
-            loadMoreElement.style.display = hasMoreArticles ? 'flex' : 'none';
-            
-            // Update button text to show remaining articles
-            if (hasMoreArticles) {
-                const remainingArticles = allArticles.length - end;
-                loadMoreElement.textContent = `Load More (${remainingArticles} articles left)`;
-            }
-        }
-    }
-
-    function createArticleCard(article) {
-        const articleCard = document.createElement('div');
-        articleCard.className = 'article-card';
-        if (article.code) {
-            articleCard.setAttribute('data-code', article.code);
-        }
-        if (article.isFromPinnedFeed) {
-            articleCard.classList.add('pinned-feed-article');
-        }
-
-        articleCard.innerHTML = `
-            ${article.imageUrl ? `<img src="${article.imageUrl}" alt="${article.title}" class="article-image">` : ''}
-            <div class="article-content">
-                <h2 class="article-title">
-                    <a href="${article.link}" target="_blank">${article.title}</a>
-                </h2>
-                <p class="article-description">${article.description}</p>
-                <div class="article-meta">
-                    <span>${article.author}</span>
-                    <span>${article.pubDate.toLocaleDateString()}</span>
-                    <span class="article-source">${article.source}</span>
-                </div>
-            </div>
-        `;
-
-        return articleCard;
-    }
-
-    async function fetchAndParseFeed(rssUrl, feedName, feedCode, feedLimit = 20) {
-        const response = await new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({ action: 'fetchRSS', url: rssUrl }, (response) => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
-                } else {
-                    resolve(response);
-                }
-            });
-        });
-
-        if (!response.success) {
-            throw new Error(response.error || 'Không thể tải RSS feed');
-        }
-
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(response.data, 'text/xml');
-
-        const parseError = xmlDoc.querySelector('parsererror');
-        if (parseError) {
-            throw new Error('Không thể đọc nội dung RSS feed. Vui lòng kiểm tra lại URL.');
-        }
-
-        const items = xmlDoc.getElementsByTagName('item');
-        if (!items || items.length === 0) {
-            throw new Error('Không tìm thấy bài viết nào trong RSS feed.');
-        }
-
-        const articles = [];
-        const limit = Math.min(feedLimit, items.length);
-        
-        for (let i = 0; i < limit; i++) {
-            const item = items[i];
-            const titleElement = item.querySelector('title');
-            const linkElement = item.querySelector('link');
-            const descriptionElement = item.querySelector('description');
-            const pubDateElement = item.querySelector('pubDate');
-            const authorElement = item.querySelector('dc\\:creator') || item.querySelector('creator');
-            const imageElement = item.querySelector('media\\:content') || item.querySelector('enclosure');
-
-            let imageUrl = '';
-            if (imageElement) {
-                imageUrl = imageElement.getAttribute('url') || '';
-            } else if (descriptionElement) {
-                const imgMatch = descriptionElement.textContent.match(/<img[^>]+src="([^">]+)"/);
-                if (imgMatch) {
-                    imageUrl = imgMatch[1];
-                }
-            }
-
-            const title = titleElement?.textContent?.trim() || 'Không có tiêu đề';
-            const link = linkElement?.textContent?.trim() || '#';
-            const description = descriptionElement?.textContent?.trim() || 'Không có mô tả';
-            const pubDate = pubDateElement?.textContent?.trim() || 'Không có ngày';
-            const author = authorElement?.textContent?.trim() || 'Không có tác giả';
-
-            articles.push({
-                title,
-                link,
-                description,
-                pubDate: new Date(pubDate),
-                author,
-                imageUrl,
-                source: feedName || new URL(rssUrl).hostname,
-                code: feedCode || ''
-            });
-        }
-
-        return articles;
-    }
-
-    function getFaviconUrl(url) {
-        try {
-            const urlObj = new URL(url);
-            // Try to get favicon directly from the website first
-            const directFavicon = `${urlObj.origin}/favicon.ico`;
-            return directFavicon;
-        } catch (e) {
-            return '';
-        }
-    }
-
-    function createBookmarkElement(node) {
-        if (node.url) {
-            // Create bookmark item
-            const bookmarkElement = document.createElement('a');
-            bookmarkElement.href = node.url;
-            bookmarkElement.className = 'bookmark-item';
-            bookmarkElement.target = '_blank';
-
-            // Add favicon
-            const favicon = document.createElement('img');
-            favicon.className = 'bookmark-favicon';
-            favicon.src = getFaviconUrl(node.url);
-            favicon.onerror = () => {
-                // If direct favicon fails, try Google's service
-                const urlObj = new URL(node.url);
-                favicon.src = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
-                favicon.onerror = () => {
-                    favicon.style.display = 'none';
-                };
-            };
-            bookmarkElement.appendChild(favicon);
-
-            // Add title
-            const title = document.createElement('span');
-            title.textContent = node.title;
-            bookmarkElement.appendChild(title);
-
-            return bookmarkElement;
-        } else if (node.children) {
-            // Create folder
-            const folderElement = document.createElement('div');
-            folderElement.className = 'bookmark-folder';
-
-            // Create folder header
-            const folderHeader = document.createElement('div');
-            folderHeader.className = 'bookmark-folder-header';
-            folderHeader.textContent = node.title;
-            folderElement.appendChild(folderHeader);
-
-            // Create folder content
-            const folderContent = document.createElement('div');
-            folderContent.className = 'bookmark-folder-content';
-
-            // Add children
-            node.children.forEach(child => {
-                if (child.url || (child.children && child.children.length > 0)) {
-                    const childElement = createBookmarkElement(child);
-                    folderContent.appendChild(childElement);
-                }
-            });
-
-            // Add hover events
-            let timeoutId;
-
-            folderHeader.addEventListener('mouseenter', () => {
-                clearTimeout(timeoutId);
-                const rect = folderHeader.getBoundingClientRect();
-                const isSubfolder = folderElement.closest('.bookmark-folder-content') !== null;
-                
-                if (isSubfolder) {
-                    // For subfolders, show content on the right
-                    folderContent.style.top = `${rect.top}px`;
-                    folderContent.style.left = `${rect.right}px`;
-                } else {
-                    // For main folders, show content below
-                    folderContent.style.top = `${rect.bottom}px`;
-                    folderContent.style.left = `${rect.left}px`;
-                }
-                folderContent.style.display = 'block';
-            });
-
-            folderElement.addEventListener('mouseleave', () => {
-                timeoutId = setTimeout(() => {
-                    folderContent.style.display = 'none';
-                }, 100); // Small delay to prevent flickering
-            });
-
-            folderContent.addEventListener('mouseenter', () => {
-                clearTimeout(timeoutId);
-            });
-
-            folderContent.addEventListener('mouseleave', () => {
-                timeoutId = setTimeout(() => {
-                    folderContent.style.display = 'none';
-                }, 100);
-            });
-
-            folderElement.appendChild(folderContent);
-            return folderElement;
-        }
-        return null;
-    }
-
-    function displayBookmarkBar(nodes) {
-        const bookmarksContainer = document.querySelector('.bookmarks-bar');
-        bookmarksContainer.innerHTML = '';
-
-        // Get bookmarks bar (first level)
-        const bookmarksBar = nodes[0].children.find(node => node.title === 'Bookmarks Bar');
-        if (bookmarksBar && bookmarksBar.children) {
-            bookmarksBar.children.forEach(node => {
-                if (node.url || (node.children && node.children.length > 0)) {
-                    const element = createBookmarkElement(node);
-                    if (element) {
-                        bookmarksContainer.appendChild(element);
-                    }
-                }
-            });
-        }
     }
 }); 

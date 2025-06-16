@@ -20,7 +20,7 @@
     }
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://c.staticblitz.com; font-src 'self' https://fonts.gstatic.com https://c.staticblitz.com; img-src 'self' data: https:; connect-src 'self' https:;"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://c.staticblitz.com; font-src 'self' https://fonts.gstatic.com https://c.staticblitz.com; img-src 'self' data: https:; connect-src 'self' https:;"
   },
   "background": {
     "service_worker": "background.js"
@@ -34,7 +34,7 @@
     "128": "icons/icon128.png"
   },
   "web_accessible_resources": [{
-    "resources": ["newtab.html"],
+    "resources": ["newtab.html", "*.js"],
     "matches": ["chrome://newtab/*"]
   }]
 } 

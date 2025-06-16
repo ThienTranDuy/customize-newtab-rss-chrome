@@ -283,6 +283,7 @@ header h1 {
 }
 
 .article-card {
+  position: relative;
   background: var(--card-bg);
   border-radius: 12px;
   overflow: hidden;
@@ -299,6 +300,10 @@ header h1 {
   border-color: #007AFF;
 }
 .article-card .article-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 99;
   width: 100%;
   height: 150px !important;
   -o-object-fit: cover;
@@ -309,17 +314,35 @@ header h1 {
   transform: scale(1.05);
 }
 .article-card .article-content {
-  padding: 0.5rem !important;
+  padding-top: 150px !important;
+  position: relative;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
+.article-card .article-content:before {
+  content: "";
+  height: 150px;
+  width: 100%;
+  background: #020024;
+  background: linear-gradient(200deg, rgb(2, 0, 36) 0%, rgb(9, 9, 121) 35%, rgb(0, 212, 255) 100%);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 .article-card .article-title {
+  margin-top: 0.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Giới hạn 3 dòng */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 4rem;
   font-size: 1rem !important;
   font-weight: 600;
   line-height: 1.4;
-  margin-bottom: 0.5rem;
+  padding-left: 0.5rem;
 }
 .article-card .article-title a {
   color: var(--text-color);
@@ -329,7 +352,7 @@ header h1 {
 .article-card .article-title a:hover {
   color: #007AFF;
 }
-.article-card .article-description {
+.article-card .article-description, .article-card .medium-feed-item {
   font-size: 0.95rem;
   color: #aaa;
   line-height: 1.6;
@@ -338,6 +361,7 @@ header h1 {
   display: none;
 }
 .article-card .article-meta {
+  margin-top: -1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -345,6 +369,11 @@ header h1 {
   color: #888;
   padding-top: 1rem;
   border-top: 1px solid var(--border-color);
+  margin-top: -1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.75rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 .article-card .article-meta a {
   color: #007AFF;
@@ -368,9 +397,6 @@ header h1 {
   border-left: 4px solid #007AFF;
   background: rgba(0, 122, 255, 0.05);
 }
-.article-card.pinned-feed-article .article-title a {
-  color: #007AFF;
-}
 .article-card.pinned-feed-article::before {
   content: "📌";
   position: absolute;
@@ -378,6 +404,17 @@ header h1 {
   right: 0.5rem;
   font-size: 1rem;
   opacity: 0.8;
+}
+
+span.article-label-text {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.25rem;
+  background: #2A7B9B;
+  background: linear-gradient(90deg, rgb(42, 123, 155) 0%, rgb(87, 199, 133) 50%, rgb(180, 161, 0) 100%);
+  border-radius: 0px 0px 0px 5px;
+  z-index: 99;
 }
 
 #loading {
@@ -611,12 +648,8 @@ header h1 {
   color: var(--text-color);
 }
 
-.rss-feed-item.pinned {
-  border-left: 4px solid #007AFF;
-  background: rgba(0, 122, 255, 0.05);
-}
-.rss-feed-item.pinned .rss-info .feed-name {
-  color: #007AFF;
+.rss-feed-item {
+  margin-bottom: 1.5rem;
 }
 .rss-feed-item .rss-info {
   display: flex;
@@ -727,4 +760,54 @@ header h1 {
 #loadMore.loading {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+button {
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  color: #272626;
+}
+
+button#manageFeedsBtn {
+  background: #2A7B9B;
+  background: linear-gradient(90deg, rgb(42, 123, 155) 0%, rgb(87, 199, 133) 50%, rgb(237, 221, 83) 100%);
+}
+
+header {
+  text-align: right;
+  margin-top: -1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.rss-input-group {
+  margin-bottom: 2rem;
+}
+.rss-input-group input {
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  margin-right: 0.5rem;
+  background: #1a1a1a;
+  color: white;
+}
+.rss-input-group input::-moz-placeholder {
+  color: white;
+}
+.rss-input-group input::placeholder {
+  color: white;
+}
+.rss-input-group #rssUrl {
+  width: 500px;
+}
+
+.rss-manager h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.feeds-section .section-header.pinned-header {
+  color: white;
 }/*# sourceMappingURL=styles.css.map */
