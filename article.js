@@ -5,6 +5,23 @@ const articlesPerPage = 50;
 let isLoading = false;
 let existingTitles = new Set();
 
+// Function to check if title should be filtered out
+function shouldFilterTitle(title) {
+    // Check for phone numbers (0 followed by 8-12 digits)
+    const phoneRegex = /^0\d{8,12}$/;
+    if (phoneRegex.test(title)) {
+        return true;
+    }
+
+    // Check for Arabic, Korean, Japanese, Chinese characters
+    const specialCharsRegex = /[\u0600-\u06FF\uAC00-\uD7AF\u3040-\u30FF\u4E00-\u9FFF]/;
+    if (specialCharsRegex.test(title)) {
+        return true;
+    }
+
+    return false;
+}
+
 async function fetchAndParseFeed(rssUrl, feedName, feedCode, feedLimit = 20) {
     const response = await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ action: 'fetchRSS', url: rssUrl }, (response) => {
@@ -57,8 +74,8 @@ async function fetchAndParseFeed(rssUrl, feedName, feedCode, feedLimit = 20) {
 
         const title = titleElement?.textContent?.trim() || 'Không có tiêu đề';
         
-        // Skip if title already exists
-        if (existingTitles.has(title)) {
+        // Skip if title already exists or should be filtered
+        if (existingTitles.has(title) || shouldFilterTitle(title)) {
             continue;
         }
         
