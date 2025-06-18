@@ -7,9 +7,10 @@ let existingTitles = new Set();
 
 // Function to check if title should be filtered out
 function shouldFilterTitle(title) {
-    // Check for phone numbers (0 followed by 8-12 digits)
-    const phoneRegex = /^0\d{8,12}$/;
-    if (phoneRegex.test(title)) {
+    // Check for phone numbers (various formats)
+    const phoneRegex = /(^|\s)(\+?\d{1,3}[\s-]?)?(0\d{8,12}|\d{8,12})(\s|$)/;
+    const phoneWithDashRegex = /(^|\s)\+?\d{1,3}–\d{8,12}(\s|$)/;
+    if (phoneRegex.test(title) || phoneWithDashRegex.test(title)) {
         return true;
     }
 
